@@ -36,3 +36,15 @@ export type OverviewResult = {
   cards: { label: string; value: number }[]
   modules: { name: string; created: number; pending: number; abnormal: number }[]
 }
+
+// 跨模块待办：一个模块的批复结果需要另一个模块跟进时，落成一条待办。
+export type TodoItem = {
+  id: number
+  module: string
+  title: string
+  detail: string
+  refKey: string
+  refId: number
+  done: boolean
+  createdAt: string
+}

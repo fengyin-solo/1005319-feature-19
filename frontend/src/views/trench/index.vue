@@ -24,6 +24,24 @@
       </span>
     </p>
 
+    <section class="todo-panel">
+      <h3>探方台账待办（{{ todos.length }}）</h3>
+      <ul v-if="todos.length">
+        <li v-for="todo in todos" :key="todo.id">
+          <div>
+            <strong>{{ todo.title }}</strong>
+            <p class="todo-detail">{{ todo.detail }}</p>
+            <span class="todo-meta">批复日期 {{ todo.createdAt }}</span>
+          </div>
+          <div class="row-actions">
+            <button class="link" type="button" @click="openSource(todo)">查看点位</button>
+            <button class="link" type="button" @click="finishTodo(todo.id)">办结</button>
+          </div>
+        </li>
+      </ul>
+      <p v-else class="todo-empty">暂无待办，测绘控制点的废弃批复会落到这里。</p>
+    </section>
+
     <form class="filter-bar" @submit.prevent="reload">
       <label v-for="field in filterFields" :key="field" class="filter-item">
         <span>{{ field }}</span>
@@ -72,6 +90,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 import {
   downloadEntries,
@@ -79,7 +98,8 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
-import type { EntryRow } from '@/data/types'
+import { completeTodo, listTodos } from '@/data/todo-store'
+import type { EntryRow, TodoItem } from '@/data/types'
 
 const meta = moduleMeta('trench')
 const columns = ["探方编号", "所属发掘区", "布方面积", "起始层位", "现场负责人", "开工日期", "最大深度", "探方状态"]
@@ -92,6 +112,8 @@ const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
 const filterFields = columns.slice(0, 3)
+const router = useRouter()
+const todos = ref<TodoItem[]>([])
 const statusSummary = computed(() =>
   statuses.map((status: string) => ({
     status,
@@ -133,5 +155,24 @@ function reload() {
   }
 }
 
-onMounted(reload)
+function reloadTodos() {
+  todos.value = listTodos(meta.key).filter((item) => !item.done)
+}
+
+// 待办和点位是同一份数据：从这里点进去落到对应控制点详情。
+function openSource(todo: TodoItem) {
+  if (todo.refKey === 'survey') {
+    router.push({ name: 'survey-detail', params: { id: todo.refId } })
+  }
+}
+
+function finishTodo(id: number) {
+  completeTodo(id)
+  reloadTodos()
+}
+
+onMounted(() => {
+  reload()
+  reloadTodos()
+})
 </script>
